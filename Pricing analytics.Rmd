@@ -1,0 +1,131 @@
+---
+title: "Pricing analytics"
+author: "extract_text_from_pdf"
+date: "26/05/2020"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+rm(list= ls())
+library(fpp2)
+library(quantmod)
+library(dplyr)
+library(lubridate)
+
+```
+
+```{r dataset}
+
+sales_data <- readxl::read_excel("RSXFS.xls", skip = 10)
+
+sales_data <- sales_data %>% 
+  rename(month_year = observation_date)
+```
+
+```{r adjustments}
+Hmisc::monthDays(as.Date("1993-02-01"))
+
+sales_data$total_days <- Hmisc::monthDays(sales_data$month_year)
+```
+
+
+```{r bringincpi}
+quantmod::getSymbols("CPIAUCSL", src = "FRED")
+
+cpiadj <- as.data.frame(CPIAUCSL) %>%
+  tibble::rownames_to_column('month_year')
+
+cpiadj$month_year <- as.Date(cpiadj$month_year)
+sales_data$month_year <- as.Date(sales_data$month_year)
+
+
+```
+
+```{r indexcompute}
+sales_data <- sales_data %>%
+  left_join(cpiadj)
+
+View(sales_data)
+
+
+sales_data$index <- sales_data$CPIAUCSL/sales_data$CPIAUCSL[nrow(sales_data)]
+
+sales_data$REAL <- sales_data$RSXFS/sales_data$index 
+
+sales_data$sales_per_day <- sales_data$REAL/sales_data$total_days
+```
+
+
+```{r}
+head(sales_data)
+```
+
+```{r conver2ts}
+
+Y <- ts(sales_data$sales_per_day, start=c(1992,1), frequency = 12)
+
+head(sales_data)
+head(Y)
+```
+
+```{r plot}
+autoplot(Y) + ggtitle("Real Retail sales per day")
+```
+
+
+```{r }
+DY <- diff(Y)
+autoplot(DY)
+```
+
+
+```{r seasonality}
+
+ggseasonplot(DY)
+
+ggseasonplot(DY, polar = T)
+
+```
+
+
+```{r seasonalitysubseries}
+ggsubseriesplot(DY)
+
+```
+
+```{r forcast}
+fit <- forecast::snaive(DY, h=12)
+fit2 <- forecast::meanf(DY, h=12)
+fit3 <- forecast::rwf(DY, h=12)
+
+summary(fit)
+
+autoplot(fit, include = 24, showgap = FALSE)
+
+```
+
+
+```{r checkresidual}
+
+checkresiduals(fit)
+```
+
+
+```{r}
+autoplot(window(DY, start= c(2018,1), end=c(2019, 12))) +
+  autolayer(fit, series = "Seasonality")
+```
+
+```{r}
+autoplot(window(DY, start= c(2018,1), end=c(2019, 12))) +
+  autolayer(fit, series = "Seasonality Adj, Naive", PI = FALSE, showgap = FALSE) +
+    autolayer(fit2,   series = "Seasonality Adj, Naive", PI = FALSE, showgap = FALSE) +
+
+
+```
+
+
+```{r}
+arima_fit <- forecast::
+```
+
