@@ -1,8 +1,6 @@
 ---
 title: "Pricing analytics"
-author: "extract_text_from_pdf"
-date: "26/05/2020"
-output: html_document
+author: "ingeon hwang"
 ---
 
 ```{r setup, include = FALSE}
